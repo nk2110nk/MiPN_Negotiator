@@ -13,27 +13,27 @@ from matplotlib import pyplot as plt
 
 ISSUE_NAMES = [
     'Laptop',
-    'ItexvsCypress',
-    'IS_BT_Acquisition',
-    'Grocery',
-    'thompson',
-    'Car',
-    'EnergySmall_A'
+    # 'ItexvsCypress',
+    # 'IS_BT_Acquisition',
+    # 'Grocery',
+    # 'thompson',
+    # 'Car',
+    # 'EnergySmall_A'
 ]
 AGENT_LIST = [
     'Boulware',
-    'Linear',
-    'Conceder',
-    'TitForTat1',
-    'TitForTat2',
-    "AgentK",
-    "HardHeaded",
-    "Atlas3",
-    "AgentGG",
+    # 'Linear',
+    # 'Conceder',
+    # 'TitForTat1',
+    # 'TitForTat2',
+    # "AgentK",
+    # "HardHeaded",
+    # "Atlas3",
+    # "AgentGG",
 ]
 # LOAD_PATH = "./results/211025-105809/"  # issue
-LOAD_PATH = "./results/211019-140000/"  # venas
-PLOT = True
+LOAD_PATH = "./results/260311-034347/MiPN/"  # venas
+PLOT = False
 
 
 def a(x):
@@ -42,7 +42,7 @@ def a(x):
 
 def run_session(path, save_path,  opponent, domain, util1, util2, det, noise):
     session = MySAOMechanism(issues=domain, n_steps=80, avoid_ultimatum=False)
-    my_agent = TestRLNegotiator(domain, path, deterministic=det, mode='venas')
+    my_agent = TestRLNegotiator(domain, path, deterministic=det, mode='issue')
     opponent = get_opponent(opponent, add_noise=noise)
 
     # 先攻想定
