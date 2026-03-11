@@ -4,10 +4,11 @@ import gym
 import sao
 import sys
 import os
-import argparse
+import argparse # 変更箇所
 from multiprocessing import Pool
 from datetime import datetime
 from gym import register
+from itertools import combinations_with_replacement # 変更箇所
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
@@ -35,30 +36,30 @@ AGENT_LIST = [
     "AgentGG",
 ]
 ENV_LIST = [
-    ('IssueActionEnv-{}-{}-v0', 'envs.env:IssueActionEnv'),
-    ('AOPEnv-{}-{}-v0', 'envs.env:AOPEnv'),
+    ('IssueActionEnv-{}-{}-{}-v0', 'envs.env:IssueActionEnv'),
+    ('AOPEnv-{}-{}-{}-v0', 'envs.env:AOPEnv'),
 ]
 SAVE_PATH = "./results/{}/".format(datetime.now().strftime('%Y%m%d-%H%M%S')[2:])
 
 
-def register_neg_env(issue, agent, env):
-    env_name = env[0].format(issue, agent)
+def register_neg_env(issue, agents, env):
+    env_name = env[0].format(issue, agents[0], agents[1])
     register(
         id=env_name,
         entry_point=env[1],
-        kwargs={'domain': issue, 'opponent': agent, 'is_first': True},
+        kwargs={'domain': issue, 'opponent': agents, 'is_first': True},
     )
     return env_name
 
 
 def run_rl(args):
-    issue, agent, e_tuple, save_path = args
-    env_name = register_neg_env(issue, agent, e_tuple)
+    issue, agents, e_tuple, save_path = args
+    env_name = register_neg_env(issue, agents, e_tuple)
     f_name = env_name.split('-', maxsplit=1)[1]
     env = make_vec_env(env_name, n_envs=4)
 
     model = PPO("MlpPolicy", env, verbose=1, device="cpu", tensorboard_log=save_path)
-    model.learn(total_timesteps=500000, tb_log_name=f_name)
+    model.learn(total_timesteps=500000, tb_log_name=f_name) # もしtimestepsを変更する場合は、ここを変更
     model.save(save_path + f_name)
 
     # Use a separate environement for evaluation
@@ -68,7 +69,7 @@ def run_rl(args):
     mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=100)
     print(f"mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
     with open(save_path + "result.csv", "a") as f:
-        f.write("{},{},{},{}\n".format(*env_name.split('-')[1:3], mean_reward, std_reward))
+        f.write("{},{},{},{},{}\n".format(*env_name.split('-')[1:4], mean_reward, std_reward)) # 変更箇所
 
     env.close()
     eval_env.close()
@@ -82,8 +83,10 @@ def main_issue(agents, issues):
         f.write("domain,opponent,mean,std\n")
 
     p = Pool(len(agents))
+    pairs = list(combinations_with_replacement(agents, 2)) # 変更箇所
+    
     for issue in issues:
-        p.map(run_rl, [(issue, agent, ENV_LIST[0], save_path) for agent in agents])
+        p.map(run_rl, [(issue, agent_set, ENV_LIST[0], save_path) for agent_set in pairs]) # 変更箇所
 
 
 def main_aop(agents, issues):
@@ -93,8 +96,10 @@ def main_aop(agents, issues):
         f.write("domain,opponent,mean,std\n")
 
     p = Pool(len(agents))
+    pairs = list(combinations_with_replacement(agents, 2)) # 変更箇所
+    
     for issue in issues:
-        p.map(run_rl, [(issue, agent, ENV_LIST[1], save_path) for agent in agents])
+        p.map(run_rl, [(issue, agent_set, ENV_LIST[0], save_path) for agent_set in pairs]) # 変更箇所
 
 
 def main():
