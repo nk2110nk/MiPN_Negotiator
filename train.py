@@ -4,6 +4,7 @@ import gym
 import sao
 import sys
 import os
+import argparse
 from multiprocessing import Pool
 from datetime import datetime
 from gym import register
@@ -15,23 +16,23 @@ dill.extend(True)
 
 ISSUE_NAMES = [
     'Laptop',
-    # 'ItexvsCypress',
-    # 'IS_BT_Acquisition',
-    # 'Grocery',
-    # 'thompson',
-    # 'Car',
-    # 'EnergySmall_A'
+    'ItexvsCypress',
+    'IS_BT_Acquisition',
+    'Grocery',
+    'thompson',
+    'Car',
+    'EnergySmall_A'
 ]
 AGENT_LIST = [
     'Boulware',
-    # 'Linear',
-    # 'Conceder',
-    # 'TitForTat1',
-    # 'TitForTat2',
-    # "AgentK",
-    # "HardHeaded",
-    # "Atlas3",
-    # "AgentGG",
+    'Linear',
+    'Conceder',
+    'TitForTat1',
+    'TitForTat2',
+    "AgentK",
+    "HardHeaded",
+    "Atlas3",
+    "AgentGG",
 ]
 ENV_LIST = [
     ('IssueActionEnv-{}-{}-v0', 'envs.env:IssueActionEnv'),
@@ -74,31 +75,39 @@ def run_rl(args):
     del model
 
 
-def main_issue():
+def main_issue(agents, issues):
     save_path = SAVE_PATH + 'MiPN/'
     os.makedirs(save_path)
     with open(save_path + "result.csv", "w") as f:
         f.write("domain,opponent,mean,std\n")
 
-    p = Pool(len(AGENT_LIST))
-    for issue in ISSUE_NAMES:
-        p.map(run_rl, [(issue, agent, ENV_LIST[0], save_path) for agent in AGENT_LIST])
+    p = Pool(len(agents))
+    for issue in issues:
+        p.map(run_rl, [(issue, agent, ENV_LIST[0], save_path) for agent in agents])
 
 
-def main_aop():
+def main_aop(agents, issues):
     save_path = SAVE_PATH + 'VeNAS/'
     os.makedirs(save_path)
     with open(save_path + "result.csv", "w") as f:
         f.write("domain,opponent,mean,std\n")
 
-    p = Pool(len(AGENT_LIST))
-    for issue in ISSUE_NAMES:
-        p.map(run_rl, [(issue, agent, ENV_LIST[1], save_path) for agent in AGENT_LIST])
+    p = Pool(len(agents))
+    for issue in issues:
+        p.map(run_rl, [(issue, agent, ENV_LIST[1], save_path) for agent in agents])
 
 
 def main():
-    main_issue()
-    main_aop()
+    # 変更箇所
+    # IssueとAgentを指定して実行 -> --agents, --issue
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--agents', '-a', required=True, nargs='*', type=str)
+    parser.add_argument('--issue', '-i', required=True, nargs='*', type=str)
+    args = parser.parse_args()
+    #print(args)
+    
+    main_issue(args.agents, args.issue) # MiPN
+    main_aop(args.agents, args.issue) # VeNAS
 
 
 if __name__ == '__main__':
