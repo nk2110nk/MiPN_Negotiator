@@ -60,7 +60,7 @@ def run_session_trained(path, save_path, opponent, domain, util1, util2, util3, 
         plt.close()
 
     session.reset()
-    del my_agent, session, opponent0, opponent1
+    del my_agent, session, opponent0, opponent1, util1._ami, util2._ami, util3._ami # 変更箇所
     gc.collect()
 
     if result['agreement'] is not None:
