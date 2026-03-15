@@ -93,8 +93,8 @@ def test_trained(config):
     results = [['my_util', 'opp_util1', 'opp_util2', 'social', 'nash', 'agreement', 'step']] # 変更箇所
 
     # ドメイン設定
-    # !!!ここさえ変更すればOK!!!
     domain, _ = Issue.from_genius('./domain/' + issue + '/domain.xml')
+    # !!!ここさえ変更すればOK!!!
     scenario_number1 = 0
     scenario_number2 = 1
     scenario_number3 = 2
@@ -102,7 +102,6 @@ def test_trained(config):
     util2, _ = UtilityFunction.from_genius(f'./domain/{issue}/utility{scenario_number2+1}.xml')
     util3, _ = UtilityFunction.from_genius(f'./domain/{issue}/utility{scenario_number3+1}.xml')
 
-    # ここは2人用に改良しなければならない
     for _ in range(1 if PLOT else 100):
         results.append(run_session_trained(f'{LOAD_PATH}{issue}-{agent[0]}-{agent[1]}-v0.zip', save_path, agent, domain, util1, util2, util3, det, noise))
 
