@@ -99,7 +99,7 @@ def main_aop(agents, issues):
     pairs = list(combinations_with_replacement(agents, 2)) # 変更箇所
     
     for issue in issues:
-        p.map(run_rl, [(issue, agent_set, ENV_LIST[0], save_path) for agent_set in pairs]) # 変更箇所
+        p.map(run_rl, [(issue, agent_set, ENV_LIST[1], save_path) for agent_set in pairs]) # 変更箇所
 
 
 def main():
