@@ -217,7 +217,7 @@ class DenseEnv(AOPEnv):
 class IssueActionEnv(AOPEnv):
     is_acceptable = True
 
-    def __init__(self, domain='party', opponent='Boulware', is_first=False, test=False):
+    def __init__(self, domain='party', opponent=['Boulware','Boulware'], is_first=False, test=False):
         super().__init__(domain, opponent, is_first, test)
         if self.is_acceptable:
             # [issue, (accept, (end), reject)]
@@ -264,53 +264,53 @@ class IssueActionEnv(AOPEnv):
             return self.observation, self.get_reward(), False, {}
 
 
-class RLBOAEnv(NaiveEnv):
-    def __init__(self, domain='party', opponent='Boulware', is_first=False, test=False, n_actions=10):
-        super().__init__(domain, opponent, is_first, test)
-        self.n_actions = 10
-        self.observer = RLBOAObserve(self.domain, self.my_util)
-        self.observation_space = self.observer.observation_space
-        self.action_space = gym.spaces.Discrete(n_actions)
+# class RLBOAEnv(NaiveEnv):
+#     def __init__(self, domain='party', opponent='Boulware', is_first=False, test=False, n_actions=10):
+#         super().__init__(domain, opponent, is_first, test)
+#         self.n_actions = 10
+#         self.observer = RLBOAObserve(self.domain, self.my_util)
+#         self.observation_space = self.observer.observation_space
+#         self.action_space = gym.spaces.Discrete(n_actions)
 
-    def reset(self):
-        # セッション，エージェントの作成
-        del self.my_util._ami
-        del self.opp_util._ami
-        if self.session is not None:
-            del self.my_agent.om
-            self.session.reset()
+#     def reset(self):
+#         # セッション，エージェントの作成
+#         del self.my_util._ami
+#         del self.opp_util._ami
+#         if self.session is not None:
+#             del self.my_agent.om
+#             self.session.reset()
 
-        # self.session.__init__(issues=self.domain, n_steps=80, avoid_ultimatum=False)
-        self.session = MySAOMechanism(issues=self.domain, n_steps=80, avoid_ultimatum=False)
-        self.my_agent = RLBOANegotiator()
-        opponent = self.get_opponent()
+#         # self.session.__init__(issues=self.domain, n_steps=80, avoid_ultimatum=False)
+#         self.session = MySAOMechanism(issues=self.domain, n_steps=80, avoid_ultimatum=False)
+#         self.my_agent = RLBOANegotiator()
+#         opponent = self.get_opponent()
 
-        # セッションにエージェントの追加
-        if self.is_first:
-            self.session.add(self.my_agent, ufun=self.my_util)
-            self.session.add(opponent, ufun=self.opp_util)
-            self.my_agent.om = HardHeadedFrequencyModel(self.my_util)
-            self.state = None
-        else:
-            self.session.add(opponent, ufun=self.opp_util)
-            self.session.add(self.my_agent, ufun=self.my_util)
-            self.my_agent.om = HardHeadedFrequencyModel(self.my_util)
-            # 後攻だったら相手に1回提案させる
-            self.state = self.session.step().__dict__
+#         # セッションにエージェントの追加
+#         if self.is_first:
+#             self.session.add(self.my_agent, ufun=self.my_util)
+#             self.session.add(opponent, ufun=self.opp_util)
+#             self.my_agent.om = HardHeadedFrequencyModel(self.my_util)
+#             self.state = None
+#         else:
+#             self.session.add(opponent, ufun=self.opp_util)
+#             self.session.add(self.my_agent, ufun=self.my_util)
+#             self.my_agent.om = HardHeadedFrequencyModel(self.my_util)
+#             # 後攻だったら相手に1回提案させる
+#             self.state = self.session.step().__dict__
 
-        self.observer.reset()
-        self.observation = self.observer(self.state)
-        return self.observation
+#         self.observer.reset()
+#         self.observation = self.observer(self.state)
+#         return self.observation
 
-    def step(self, action: int):
-        self.action = action
-        self.my_agent.set_target(self.action)
-        for _ in range(2):
-            self.state = self.session.step().__dict__
-            # 状態を更新
-            self.observation = self.observer(self.state)
-            if self.state['agreement'] is not None:  # 合意していたら
-                return self.observation, self.get_reward(), True, {}
-            if self.state['timedout'] or self.state['broken']:
-                return self.observation, self.get_reward(), True, {}
-        return self.observation, self.get_reward(), False, {}
+#     def step(self, action: int):
+#         self.action = action
+#         self.my_agent.set_target(self.action)
+#         for _ in range(2):
+#             self.state = self.session.step().__dict__
+#             # 状態を更新
+#             self.observation = self.observer(self.state)
+#             if self.state['agreement'] is not None:  # 合意していたら
+#                 return self.observation, self.get_reward(), True, {}
+#             if self.state['timedout'] or self.state['broken']:
+#                 return self.observation, self.get_reward(), True, {}
+#         return self.observation, self.get_reward(), False, {}
