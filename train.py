@@ -8,11 +8,12 @@ import argparse # 変更箇所
 from multiprocessing import Pool
 from datetime import datetime
 from gym import register
-from itertools import combinations_with_replacement # 変更箇所
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
+from datetime import datetime # 変更箇所
+# from itertools import combinations_with_replacement # 変更箇所
 dill.extend(True)
 
 ISSUE_NAMES = [
@@ -35,11 +36,11 @@ AGENT_LIST = [
     "Atlas3",
     "AgentGG",
 ]
+global SAVE_PATH
 ENV_LIST = [
     ('IssueActionEnv-{}-{}-{}-v0', 'envs.env:IssueActionEnv'),
     ('AOPEnv-{}-{}-{}-v0', 'envs.env:AOPEnv'),
 ]
-SAVE_PATH = "./results/{}/".format(datetime.now().strftime('%Y%m%d-%H%M%S')[2:])
 
 
 def register_neg_env(issue, agents, env):
@@ -55,7 +56,8 @@ def register_neg_env(issue, agents, env):
 def run_rl(args):
     issue, agents, e_tuple, save_path = args
     env_name = register_neg_env(issue, agents, e_tuple)
-    f_name = env_name.split('-', maxsplit=1)[1]
+    # f_name = env_name.split('-', maxsplit=1)[1]
+    f_name = "checkpoint" # 変更箇所
     env = make_vec_env(env_name, n_envs=4)
 
     model = PPO("MlpPolicy", env, verbose=1, device="cpu", tensorboard_log=save_path)
@@ -81,12 +83,14 @@ def main_issue(agents, issues):
     os.makedirs(save_path)
     with open(save_path + "result.csv", "w") as f:
         f.write("domain,opponent,mean,std\n")
-
-    p = Pool(len(agents))
-    pairs = list(combinations_with_replacement(agents, 2)) # 変更箇所
     
-    for issue in issues:
-        p.map(run_rl, [(issue, agent_set, ENV_LIST[0], save_path) for agent_set in pairs]) # 変更箇所
+    run_rl((issues[0], agents, ENV_LIST[0], save_path)) # ここはexpertならいいけど、のちに変更必須
+
+    # p = Pool(len(agents))
+    # pairs = list(combinations_with_replacement(agents, 2)) # 変更箇所
+    
+    # for issue in issues:
+    #     p.map(run_rl, [(issue, agent_set, ENV_LIST[0], save_path) for agent_set in pairs]) # 変更箇所
 
 
 def main_aop(agents, issues):
@@ -94,25 +98,36 @@ def main_aop(agents, issues):
     os.makedirs(save_path)
     with open(save_path + "result.csv", "w") as f:
         f.write("domain,opponent,mean,std\n")
+        
+    run_rl((issues[0], agents, ENV_LIST[1], save_path)) # ここはexpertならいいけど、のちに変更必須
 
-    p = Pool(len(agents))
-    pairs = list(combinations_with_replacement(agents, 2)) # 変更箇所
+    # p = Pool(len(agents))
+    # pairs = list(combinations_with_replacement(agents, 2)) # 変更箇所
     
-    for issue in issues:
-        p.map(run_rl, [(issue, agent_set, ENV_LIST[1], save_path) for agent_set in pairs]) # 変更箇所
+    # for issue in issues:
+    #     p.map(run_rl, [(issue, agent_set, ENV_LIST[1], save_path) for agent_set in pairs]) # 変更箇所
 
 
 def main():
     # 変更箇所
+    # 時間記録
+    current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
+    
     # IssueとAgentを指定して実行 -> --agents, --issue
     parser = argparse.ArgumentParser()
     parser.add_argument('--agents', '-a', required=True, nargs='*', type=str)
     parser.add_argument('--issue', '-i', required=True, nargs='*', type=str)
+    parser.add_argument('--save_path', '-sp', type=str, default="./results/")
     args = parser.parse_args()
+    agents = args.agents
+    issue = args.issue
+    save_path = args.save_path
     #print(args)
     
-    main_issue(args.agents, args.issue) # MiPN
-    main_aop(args.agents, args.issue) # VeNAS
+    SAVE_PATH = "./results/{}_{}/{}-TA/".format('-'.join(issue), '-'.join(agents), current_time) if save_path == './results/' else save_path
+    
+    main_issue(agents, issue) # MiPN
+    main_aop(agents, issue) # VeNAS
 
 
 if __name__ == '__main__':
