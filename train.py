@@ -36,7 +36,6 @@ AGENT_LIST = [
     "Atlas3",
     "AgentGG",
 ]
-global SAVE_PATH
 ENV_LIST = [
     ('IssueActionEnv-{}-{}-{}-v0', 'envs.env:IssueActionEnv'),
     ('AOPEnv-{}-{}-{}-v0', 'envs.env:AOPEnv'),
@@ -124,6 +123,7 @@ def main():
     save_path = args.save_path
     #print(args)
     
+    global SAVE_PATH
     SAVE_PATH = "./results/{}_{}/{}-TA/".format('-'.join(issue), '-'.join(agents), current_time) if save_path == './results/' else save_path
     
     main_issue(agents, issue) # MiPN
