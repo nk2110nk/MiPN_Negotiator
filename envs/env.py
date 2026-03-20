@@ -184,7 +184,7 @@ class NaiveEnv(gym.Env):
 
 
 class AOPEnv(NaiveEnv):
-    def __init__(self, domain='party', opponent='Boulware', is_first=False, test=False):
+    def __init__(self, domain='party', opponent=['Boulware','Boulware'], is_first=False, test=False):
         super().__init__(domain, opponent, is_first, test)
         self.action_space = gym.spaces.Discrete(len(self.all_bids) + 1)
 
