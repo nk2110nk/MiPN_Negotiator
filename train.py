@@ -124,7 +124,8 @@ def main():
     #print(args)
     
     global SAVE_PATH
-    SAVE_PATH = "./results/{}_{}/{}-TA/".format('-'.join(issue), '-'.join(agents), current_time) if save_path == './results/' else save_path
+    SAVE_PATH = "./results/{}_{}/{}-TA/".format('-'.join(issue), '-'.join(agents), current_time) if save_path == './results/' else save_path # 時間あり
+    # SAVE_PATH = "./results/{}_{}/".format('-'.join(issue), '-'.join(agents)) if save_path == './results/' else save_path # 時間なし
     
     main_issue(agents, issue) # MiPN
     main_aop(agents, issue) # VeNAS
