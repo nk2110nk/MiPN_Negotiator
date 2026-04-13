@@ -43,9 +43,10 @@ class NaiveEnv(gym.Env):
         self.state = None
         self.action = None
         self.observation = None
+        self.observation_opponent = None
 
         # self.observer = OneHotObserve2n(self.domain, 20)
-        self.observer = OnehotObserve2nT(self.domain, 4)
+        self.observer = OnehotObserve2nT(self.domain, 6) # 変更箇所
         # self.observer = OpponentObserve1(self.domain)
         self.all_bids = self.get_all_bids()
         self.observation_space = self.observer.observation_space
@@ -79,23 +80,22 @@ class NaiveEnv(gym.Env):
         # 自分から提案
         self.state = None
 
+        self.observation_opponent = [opp.name for opp in opponent] # 変更箇所
         self.observer.reset()
-        self.observation = self.observer(self.state)
+        self.observation = self.observer(self.state, self.observation_opponent) # 変更箇所
         return self.observation
 
     def step(self, action: int):
         self.action = self.all_bids[action]
         self.my_agent.set_next_bid(self.action)
         
-        # ここは3人用に改良しなければならない
-        for _ in range(2):
-            self.state = self.session.step().__dict__
-            # 状態を更新
-            self.observation = self.observer(self.state)
-            if self.state['agreement'] is not None:  # 合意していたら
-                return self.observation, self.get_reward(), True, {}
-            if self.state['timedout'] or self.state['broken']:
-                return self.observation, self.get_reward(), True, {}
+        self.state = self.session.step().__dict__
+        # 状態を更新 変更箇所
+        self.observation = self.observer(self.state, self.observation_opponent) # 変更箇所
+        if self.state['agreement'] is not None:  # 合意していたら
+            return self.observation, self.get_reward(), True, {}
+        if self.state['timedout'] or self.state['broken']:
+            return self.observation, self.get_reward(), True, {}
         return self.observation, self.get_reward(), False, {}
 
     def render(self, mode='human', close=False):
@@ -195,7 +195,7 @@ class AOPEnv(NaiveEnv):
             else:
                 self.state = {k: self.state['current_offer'] if k == 'agreement' else False if k == 'running' else v for
                               (k, v) in self.state.items()}
-                self.observation = self.observer(self.state)
+                self.observation = self.observer(self.state, self.observation_opponent) # 変更箇所
             return self.observation, self.get_reward(), True, {}
         else:
             return super().step(action)
@@ -233,7 +233,7 @@ class IssueActionEnv(AOPEnv):
                 else:
                     self.state = {k: self.state['current_offer'] if k == 'agreement' else False if k == 'running' else v for
                                   (k, v) in self.state.items()}
-                    self.observation = self.observer(self.state)
+                    self.observation = self.observer(self.state, self.observation_opponent) # 変更箇所
                 return self.observation, self.get_reward(), True, {}
             # elif action[-1] == 1:  # end
             #     self.state = {'broken': True, 'timedout': False}
@@ -241,26 +241,24 @@ class IssueActionEnv(AOPEnv):
             else:                       # reject
                 self.action = {i.name: i.values[v] for i, v in zip(self.domain, action)}
                 self.my_agent.set_next_bid(self.action)
-                for _ in range(2):
-                    self.state = self.session.step().__dict__
-                    # 状態を更新
-                    self.observation = self.observer(self.state)
-                    if self.state['agreement'] is not None:  # 合意していたら
-                        return self.observation, self.get_reward(), True, {}
-                    if self.state['timedout'] or self.state['broken']:
-                        return self.observation, self.get_reward(), True, {}
-                return self.observation, self.get_reward(), False, {}
-        else:
-            self.action = {i.name: i.values[v] for i, v in zip(self.domain, action)}
-            self.my_agent.set_next_bid(self.action)
-            for _ in range(2):
                 self.state = self.session.step().__dict__
-                # 状態を更新
-                self.observation = self.observer(self.state)
+                # 状態を更新 変更箇所
+                self.observation = self.observer(self.state, self.observation_opponent) # 変更箇所
                 if self.state['agreement'] is not None:  # 合意していたら
                     return self.observation, self.get_reward(), True, {}
                 if self.state['timedout'] or self.state['broken']:
                     return self.observation, self.get_reward(), True, {}
+                return self.observation, self.get_reward(), False, {}
+        else:
+            self.action = {i.name: i.values[v] for i, v in zip(self.domain, action)}
+            self.my_agent.set_next_bid(self.action)
+            self.state = self.session.step().__dict__
+            # 状態を更新 変更箇所
+            self.observation = self.observer(self.state, self.observation_opponent) # 変更箇所
+            if self.state['agreement'] is not None:  # 合意していたら
+                return self.observation, self.get_reward(), True, {}
+            if self.state['timedout'] or self.state['broken']:
+                return self.observation, self.get_reward(), True, {}
             return self.observation, self.get_reward(), False, {}
 
 
