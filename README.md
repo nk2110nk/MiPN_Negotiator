@@ -3,6 +3,26 @@
 implementation code for VeNAS and MiPN -based negotiation AI agent architecture
 ## Instructions
 
+### Docker
+
+`mipn:dev` イメージは以下でビルドできます。
+
+```bash
+docker build -t mipn:dev .
+```
+
+対話的にコンテナへ入る場合:
+
+```bash
+docker run --rm -it -v "$(pwd):/app" mipn:dev bash
+```
+
+学習をそのまま実行する場合:
+
+```bash
+docker run --rm -it -v "$(pwd):/app" mipn:dev python3 ./train.py -a Boulware -i Laptop
+```
+
 ### Requirements
 
 ```
@@ -81,14 +101,15 @@ zipp==3.5.0
 ```
 python3 ./train.py -a Boulware Conceder Linear TitForTat1 TitForTat2 -i Laptop ItexvsCypress IS_BT_Acquisition Grocery thompson Car EnergySmall_A
 ```
-
+python3 ./train.py -a Boulware -i Laptop 
 
 - Example command for testing with a pretrained model:
 ```
 python3 ./test_negotiator.py -a Boulware Conceder Linear TitForTat1 TitForTat2 -i Laptop ItexvsCypress IS_BT_Acquisition Grocery thompson Car EnergySmall_A -m ./results/260311-034347/MiPN
 ```
 
-python3 ./test_negotiator.py -a Boulware -i Laptop -m ./results/260311-034347/MiPN/
+python3 ./test_negotiator.py -a Boulware -i Laptop -m ./results/Laptop_Boulware-Boulware/20260320-054646-TA/MiPN/
+python3 ./test_negotiator.py -a Boulware -i Laptop -m ./results/Laptop_Boulware-Boulware/MiPN/
 
 - `-a` and `-i` arguments specify agents and issues for training or testing
 
@@ -122,4 +143,3 @@ python3 ./test_negotiator.py -a Boulware -i Laptop -m ./results/260311-034347/Mi
 - 新規に埋め込みベクトルを作成したい場合はこのファイルを実行．
 - `MyEmbedding` : 埋め込みベクトルを新規作成 or 作成済みの埋め込みベクトルを`embeddings`に保存してあるjsonファイルからロードする
 - `self.client = openai.OpenAI(api_key='')`にapi_keyを入力
-
