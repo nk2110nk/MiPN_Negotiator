@@ -124,14 +124,13 @@ class PPO():
         device: torch.device = "cuda:1",
         model: Optional[nn.Module] = None,
         random_train: bool = False,
-        scale: str = 'small', 
     ) -> None:
         
         self.issue = issue
         self.agents = agents
         self.n_envs = n_envs
         # 複数環境リスト作成
-        self.env_list: list[VecEnv] = self.make_env_list(scale)
+        self.env_list: list[VecEnv] = self.make_env_list()
         self.env = self.env_list[0]
 
         self.n_timesteps = 0
@@ -193,7 +192,7 @@ class PPO():
         # self.save_log = False
         self.random_train = random_train
     
-    def make_env_list(self, scale):
+    def make_env_list(self):
         if isinstance(self.issue, str):
             self.issue = [self.issue]        
         env_list = []
