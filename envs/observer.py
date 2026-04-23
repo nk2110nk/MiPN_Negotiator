@@ -133,11 +133,11 @@ class OnehotObserve2nT(AbstractBinaryObserve):
     def observe(self, state):
         offer = state['current_offer'] 
         one_hot = [1 if offer[i[0]] == i[1] else 0 for i in self.mask]
-        if state['current_proposer'] == 'RLAgent':
+        if 'RLAgent' in state['current_proposer']:
             self.my_offer = one_hot + self.my_offer[:-len(self.mask)]
-        elif state['current_proposer'] == self.opponent[0]:
+        elif self.opponent[0] in state['current_proposer']:
             self.opp_offer1 = one_hot + self.opp_offer1[:-len(self.mask)]
-        elif state['current_proposer'] == self.opponent[1]:
+        elif self.opponent[1] in state['current_proposer']:
             self.opp_offer2 = one_hot + self.opp_offer2[:-len(self.mask)]
         else:
             raise ValueError(f"Unknown proposer: {state['current_proposer']}")
