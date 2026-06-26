@@ -40,12 +40,18 @@ AGENT_LIST = [
 ENV_LIST = [
     ('IssueActionEnv-{}-{}-{}-v0', 'envs.env:IssueActionEnv'),
     ('AOPEnv-{}-{}-{}-v0', 'envs.env:AOPEnv'),
+    ('RLBOAEnv-{}-{}-{}-v0', 'envs.env:RLBOAEnv'),
 ]
 
 
-def register_neg_env(issue, agents, env):
+def normalize_agents(agents):
     if len(agents) == 1:
-        agents = [agents[0], agents[0]]
+        return [agents[0], agents[0]]
+    return agents
+
+
+def register_neg_env(issue, agents, env):
+    agents = normalize_agents(agents)
     env_name = env[0].format(issue, agents[0], agents[1])
     register(
         id=env_name,
@@ -83,7 +89,47 @@ def run_rl(args):
 def build_save_path(issues, agents, current_time, save_path):
     if save_path != './results/':
         return save_path if save_path.endswith('/') else save_path + '/'
-    return "./results/{}_{}/{}-TA/".format('-'.join(issues), '-'.join(agents), current_time)
+    agents = normalize_agents(agents)
+    return "./results/{}_{}/".format('-'.join(issues), '-'.join(agents))
+
+
+def main_rlboa(agents, issues, total_timesteps, n_envs):
+    if len(issues) != 1:
+        raise ValueError("RLBOA training currently uses one fixed domain per checkpoint. Please pass one issue.")
+    if len(agents) not in [1, 2]:
+        raise ValueError("RLBOA training expects one opponent name or exactly two opponent names")
+
+    agents = normalize_agents(agents)
+    save_path = SAVE_PATH + 'RLBOA/'
+    os.makedirs(save_path, exist_ok=True)
+    with open(save_path + "result.csv", "w") as f:
+        f.write("domain,opponent0,opponent1,mean,std,checkpoint\n")
+
+    env_name = register_neg_env(issues[0], agents, ENV_LIST[2])
+    env = make_vec_env(env_name, n_envs=n_envs)
+
+    model = PPO("MlpPolicy", env, verbose=1, device="cpu", tensorboard_log=save_path)
+    model.learn(total_timesteps=total_timesteps, tb_log_name="checkpoint")
+    checkpoint_base = save_path + "checkpoint"
+    model.save(checkpoint_base)
+
+    eval_env = gym.make(env_name)
+    eval_env.test = True
+    mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=100)
+    print(f"mean_reward:{mean_reward:.2f} +/- {std_reward:.2f}")
+    with open(save_path + "result.csv", "a") as f:
+        f.write("{},{},{},{},{},{}\n".format(
+            issues[0],
+            agents[0],
+            agents[1],
+            mean_reward,
+            std_reward,
+            checkpoint_base + ".zip",
+        ))
+
+    env.close()
+    eval_env.close()
+    del model
 
 
 def main_issue(
@@ -160,6 +206,7 @@ def main():
     parser.add_argument('--skip_venas', action='store_true')
     parser.add_argument('--random_train', action='store_true')
     parser.add_argument('--general_domain', '-gd', type=str, default=DEFAULT_GENERAL_DOMAIN)
+    parser.add_argument('--algo', choices=['rlboa', 'mipn', 'both'], default='rlboa')
     args = parser.parse_args()
     agents = args.agents
     issue = args.issue
@@ -174,17 +221,21 @@ def main():
     global SAVE_PATH
     SAVE_PATH = build_save_path(issue, agents, current_time, save_path)
     
-    main_issue(
-        agents,
-        issue,
-        total_timesteps,
-        n_envs,
-        n_rollout_steps,
-        random_train=random_train,
-        general_domain=general_domain,
-    ) # MiPN_Negotiator
-    if not args.skip_venas:
-        main_aop(agents, issue) # VeNAS
+    if args.algo in ['rlboa', 'both']:
+        main_rlboa(agents, issue, total_timesteps, n_envs)
+
+    if args.algo in ['mipn', 'both']:
+        main_issue(
+            agents,
+            issue,
+            total_timesteps,
+            n_envs,
+            n_rollout_steps,
+            random_train=random_train,
+            general_domain=general_domain,
+        ) # MiPN_Negotiator
+        if not args.skip_venas:
+            main_aop(agents, issue) # VeNAS
 
 
 if __name__ == '__main__':

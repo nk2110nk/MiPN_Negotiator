@@ -103,6 +103,14 @@ python3 ./train.py -a Boulware Conceder Linear TitForTat1 TitForTat2 -i Laptop I
 ```
 python3 ./train.py -a Boulware -i Laptop 
 
+RLBOA_Negotiator checkpoints are saved under `./results/<Issue>_<Opponent0>-<Opponent1>/RLBOA/checkpoint.zip`.
+For example:
+
+```bash
+python3 ./train.py -a Boulware -i Laptop
+python3 ./test_negotiator.py -a Boulware -i Laptop -m ./results/Laptop_Boulware-Boulware/RLBOA/
+```
+
 MiPN_Negotiator checkpoints are saved under `MiPN_Negotiator/checkpoint.pt`. Multiple domains can be trained together; observations are zero-padded to the general domain capacity and invalid issue/value actions are masked during PPO updates. By default, `--general_domain EnergySmall_A` is used, so even `-i Laptop` training creates the same input/action size needed by `Car` and `EnergySmall_A`.
 
 - Example command for testing with a pretrained model:

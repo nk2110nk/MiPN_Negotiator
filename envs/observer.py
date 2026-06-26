@@ -145,33 +145,46 @@ class OnehotObserve2nT(AbstractBinaryObserve):
         return self.observation
 
 
-# class RLBOAObserve:
-#     def __init__(self, domain, my_util):
-#         self.domain = domain
-#         self.my_util = my_util
-#         self.observation_space = gym.spaces.Box(
-#             np.array([0.0] * 5),
-#             np.array([1.0] * 5),
-#             dtype=np.float32
-#         )
-#         self.init_observation = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
-#         self.observation = np.empty_like(self.init_observation)
+class RLBOAObserve:
+    def __init__(self, domain, my_util, n_opponents=2):
+        self.domain = domain
+        self.my_util = my_util
+        self.n_participants = n_opponents + 1
+        obs_len = self.n_participants * 2 + 1
+        self.observation_space = gym.spaces.Box(
+            np.array([0.0] * obs_len),
+            np.array([1.0] * obs_len),
+            dtype=np.float32
+        )
+        self.init_observation = np.zeros(obs_len, dtype=np.float32)
+        self.observation = np.empty_like(self.init_observation)
+        self.opponents = []
 
-#     def reset(self):
-#         self.observation[...] = self.init_observation
+    def reset(self):
+        self.observation[...] = self.init_observation
 
-#     def __call__(self, state):
-#         if state is None:
-#             return self.init_observation
-#         else:
-#             return self.observe(state)
+    def __call__(self, state, opponents=None):
+        if opponents is not None:
+            self.opponents = opponents
+        if state is None:
+            return self.init_observation.copy()
+        else:
+            return self.observe(state)
 
-#     def observe(self, state):
-#         if 'RLAgent' in state['current_proposer']:
-#             self.observation[2] = self.observation[0]
-#             self.observation[0] = self.my_util(state['current_offer'])
-#         else:
-#             self.observation[3] = self.observation[1]
-#             self.observation[1] = self.my_util(state['current_offer'])
-#         self.observation[4] = state['relative_time']
-#         return self.observation
+    def _proposer_index(self, proposer):
+        if 'RLAgent' in proposer:
+            return 0
+        for i, opponent in enumerate(self.opponents):
+            if opponent in proposer:
+                return i + 1
+        raise ValueError(f"Unknown proposer: {proposer}")
+
+    def observe(self, state):
+        offer = state['current_offer']
+        proposer_idx = self._proposer_index(state['current_proposer'])
+        current_offset = proposer_idx
+        previous_offset = self.n_participants + proposer_idx
+        self.observation[previous_offset] = self.observation[current_offset]
+        self.observation[current_offset] = self.my_util(offer)
+        self.observation[-1] = state['relative_time']
+        return self.observation.copy()

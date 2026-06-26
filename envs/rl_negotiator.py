@@ -274,7 +274,75 @@ class RLBOANegotiator(RLNegotiator):
         return best_bid
 
     def get_bid_range(self):
-        return self.ordered_outcomes[self.range_index[self.target]:self.range_index[self.target+1]]
+        target = max(0, min(int(self.target), self.n_ranges - 1))
+        start = self.range_index[target]
+        end = self.range_index[target + 1]
+        if start < end:
+            return self.ordered_outcomes[start:end]
+
+        for radius in range(1, self.n_ranges):
+            for candidate in [target - radius, target + radius]:
+                if 0 <= candidate < self.n_ranges:
+                    start = self.range_index[candidate]
+                    end = self.range_index[candidate + 1]
+                    if start < end:
+                        return self.ordered_outcomes[start:end]
+        return self.ordered_outcomes
 
     def set_target(self, target) -> None:
-        self.target = target
+        self.target = max(0, min(int(target), self.n_ranges - 1))
+
+
+class TestRLBOANegotiator(RLBOANegotiator):
+    def __init__(self, domain, path, deterministic=True, opponents=None, n_ranges=10, **kwargs):
+        super().__init__(n_ranges=n_ranges, **kwargs)
+        self.domain = domain
+        self.path = path
+        self.deterministic = deterministic
+        self.opponents = opponents or []
+        self.model = PPO.load(self._resolve_model_path(path))
+        self.observer = None
+        self.states = None
+
+    @staticmethod
+    def _resolve_model_path(path):
+        if os.path.isdir(path):
+            candidates = [
+                os.path.join(path, "checkpoint.zip"),
+                os.path.join(path, "checkpoint"),
+            ]
+            for candidate in candidates:
+                if os.path.exists(candidate):
+                    return candidate
+        return path
+
+    def on_ufun_changed(self):
+        super().on_ufun_changed()
+        self.observer = RLBOAObserve(self.domain, self._utility_function, n_opponents=len(self.opponents))
+        self.observer.reset()
+
+    def _observe(self, state):
+        if self.observer is None:
+            self.observer = RLBOAObserve(self.domain, self._utility_function, n_opponents=len(self.opponents))
+            self.observer.reset()
+        if state is None:
+            return self.observer(None, self.opponents)
+        return self.observer(state.__dict__, self.opponents)
+
+    def _set_target_from_policy(self, state):
+        observation = self._observe(state)
+        action, self.states = self.model.predict(
+            observation,
+            state=self.states,
+            deterministic=self.deterministic,
+        )
+        self.set_target(int(np.asarray(action).reshape(-1)[0]))
+
+    def respond(self, state: MechanismState, offer: "Outcome") -> "ResponseType":
+        self._set_target_from_policy(state)
+        return super().respond(state, offer)
+
+    def propose(self, state: MechanismState) -> Optional["Outcome"]:
+        if state is None or getattr(state, "current_offer", None) is None:
+            self._set_target_from_policy(None)
+        return super().propose(state)

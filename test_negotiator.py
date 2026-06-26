@@ -9,7 +9,7 @@ import sao
 from sao.my_sao import MySAOMechanism
 from sao.my_negotiators import *
 from envs.domain_loader import load_genius_domain
-from envs.rl_negotiator import TestRLNegotiator
+from envs.rl_negotiator import TestRLBOANegotiator, TestRLNegotiator
 from matplotlib import pyplot as plt
 
 ISSUE_NAMES = [
@@ -41,13 +41,21 @@ def run_session_trained(path, save_path, opponent, domain, util1, util2, util3, 
     session = MySAOMechanism(issues=domain, n_steps=80, avoid_ultimatum=False)
     opponent0 = get_opponent(opponent[0], agent_number=0, add_noise=noise) # 変更箇所
     opponent1 = get_opponent(opponent[1], agent_number=1, add_noise=noise) # 変更箇所
-    my_agent = TestRLNegotiator(
-        domain,
-        path,
-        deterministic=det,
-        mode='issue',
-        opponents=[opponent0.name, opponent1.name],
-    )
+    if is_rlboa_model_path(path):
+        my_agent = TestRLBOANegotiator(
+            domain,
+            path,
+            deterministic=det,
+            opponents=[opponent0.name, opponent1.name],
+        )
+    else:
+        my_agent = TestRLNegotiator(
+            domain,
+            path,
+            deterministic=det,
+            mode='issue',
+            opponents=[opponent0.name, opponent1.name],
+        )
 
     # 本実験では先攻・後攻の想定を考慮する必要がない
     session.add(my_agent, ufun=util1)
@@ -120,6 +128,14 @@ def test_trained(config):
 
 def resolve_model_path(issue, agent):
     load_path = LOAD_PATH
+    if is_rlboa_model_path(load_path):
+        if os.path.isdir(load_path):
+            for filename in ["checkpoint.zip", "checkpoint"]:
+                checkpoint_path = os.path.join(load_path, filename)
+                if os.path.exists(checkpoint_path):
+                    return checkpoint_path
+        return load_path
+
     checkpoint_path = os.path.join(load_path, "checkpoint.pt") if os.path.isdir(load_path) else load_path
     if checkpoint_path.endswith(".pt") and os.path.exists(checkpoint_path):
         return checkpoint_path
@@ -127,7 +143,7 @@ def resolve_model_path(issue, agent):
 
 
 def build_result_path(load_path, plot, agent, issue, det, noise):
-    result_root = os.path.dirname(load_path) if load_path.endswith(".pt") else load_path
+    result_root = os.path.dirname(load_path) if load_path.endswith((".pt", ".zip")) else load_path
     return os.path.join(
         result_root,
         'img' if plot else 'csv',
@@ -135,6 +151,11 @@ def build_result_path(load_path, plot, agent, issue, det, noise):
         issue,
         f'det={det}_noise={noise}',
     ) + os.sep
+
+
+def is_rlboa_model_path(path):
+    parts = os.path.normpath(path).split(os.sep)
+    return "RLBOA" in parts
 
 
 def get_opponent(opponent, agent_number=None, add_noise=False):
